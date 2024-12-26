@@ -13,6 +13,9 @@ class NGramModel(ModelInterface):
         self.probabilities = defaultdict(dict)
         self.vocab = set()
 
+    def __str__(self):
+        return f"n_backoff_{self.n}_{self.alpha}"
+
     def _predict_next_char(self, context):
         if context in self.probabilities:
             next_char = max(self.probabilities[context], key=self.probabilities[context].get)
@@ -46,4 +49,3 @@ class NGramModel(ModelInterface):
         for context, counter in self.model.items():
             total_count = sum(counter.values()) + self.alpha * len(self.vocab)
             self.probabilities[context] = {char: (count + self.alpha) / total_count for char, count in counter.items()}
-

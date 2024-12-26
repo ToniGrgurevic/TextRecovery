@@ -1,0 +1,9 @@
+-in dataLoader add save bulshit (faster)
+-change loss computation (only # sings)
+-in test data loader myb drop the final bach (myb not)
+-add cpu usage!!!
+-save the models -> train many of them , find 1-2 parameters to make changes and make validation (update data so that NN can also be validated)
+
+https://arxiv.org/pdf/1409.3215
+https://arxiv.org/pdf/1406.1078
+file:///C:/Users/Toni/Downloads/lstm.pdf
