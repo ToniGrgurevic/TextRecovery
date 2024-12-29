@@ -33,3 +33,4 @@ def accuracy(predicted_data, true_data):
         'BLEU': avg_bleu_score,
         'Levenshtein Distance': avg_levenshtein_distance
     }
+

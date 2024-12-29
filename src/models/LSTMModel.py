@@ -26,9 +26,9 @@ class Seq2SeqLSTM(nn.Module):
 
     def forward(self, x):
         x = x.to(self.device)
-        #print(x)
+        # print(x)
         embedded = self.embedding(x)
-        #print(embedded)
+        # print(embedded)
         lstm_out, _ = self.lstm(embedded)
         output = self.fc(lstm_out)
         return output
@@ -58,7 +58,7 @@ class LSTMModel(ModelInterface):
                 f"_ls{self.label_smoothing}")
 
     def train(self, data, target_data, epochs=10):
-        valid_line = len(data) - 500
+        valid_line = 500
 
         self.unique_chars = set(''.join(target_data) + '#')
         self.char_to_index = {'#': 0, '<PAD>': 1, '<UNK>': 2}
@@ -72,13 +72,12 @@ class LSTMModel(ModelInterface):
                                  len(self.char_to_index),
                                  self.num_layers,
                                  device=self.device).to(self.device)
-        print(len(self.char_to_index))
-        print(self.char_to_index)
+
         # self.model = self.model.to(self.device)
         self.optimizer = optim.Adam(self.model.parameters(), lr=self.learning_rate)
-        batch_size = 32
-        dataset = TextDataset(data[:valid_line], target_data[:valid_line], self.char_to_index)
-        dataset_testing = TextDataset(data[valid_line:], target_data[valid_line:], self.char_to_index)
+        batch_size = 50
+        dataset = TextDataset(data[valid_line:], target_data[valid_line:], self.char_to_index)
+        dataset_testing = TextDataset(data[:valid_line], target_data[:valid_line], self.char_to_index)
 
         def collate_fn(batch):
             inputs, targets = zip(*batch)
@@ -103,7 +102,6 @@ class LSTMModel(ModelInterface):
             loss_epoch = 0
             for inputs, targets in dataloader:
                 # Traning
-                print(inputs)
                 inputs = inputs.to(self.device)
                 targets = targets.to(self.device)
                 self.optimizer.zero_grad()
@@ -118,25 +116,34 @@ class LSTMModel(ModelInterface):
             correct = 0
             total = 0
             with torch.no_grad():
-                # testing progress on unseen data
                 for inputs, targets in dataloader_testing:
                     inputs = inputs.to(self.device)
                     targets = targets.to(self.device)
                     outputs = self.model(inputs)
-                    loss = self.criterion(outputs.view(-1, outputs.size(-1)), targets.view(-1))
+
+                    # Create mask for non-padding tokens
+                    pad_mask = targets != self.char_to_index['<PAD>']
+
+                    # Calculate loss only on non-padding tokens
+                    outputs_masked = outputs[pad_mask]
+                    targets_masked = targets[pad_mask]
+                    loss = self.criterion(outputs_masked.view(-1, outputs.size(-1)),
+                                          targets_masked.view(-1))
                     test_loss += loss.item()
 
+                    # Calculate accuracy only on non-padding tokens
                     _, predicted = torch.max(outputs, dim=-1)
-                    total += targets.size(0) * targets.size(1)
-                    correct += (predicted == targets).sum().item()
+                    total += pad_mask.sum().item()
+                    correct += ((predicted == targets) & pad_mask).sum().item()
 
             test_loss /= len(dataloader_testing)
-            accuracy = correct / total
+            accuracy_valid = correct / total
             print(
-                f'Epoch {epoch + 1}/{epochs}, Loss: {loss_epoch / len(dataloader)}, Test Loss: {test_loss}, Accuracy: {accuracy}')
+                f'Epoch {epoch + 1}/{epochs}, Loss: {loss_epoch / len(dataloader)}, Test Loss: {test_loss},'
+                f' Accuracy: {accuracy_valid}')
             train_losses.append(loss_epoch / len(dataloader))
             test_losses.append(test_loss)
-            accuracies.append(accuracy)
+            accuracies.append(accuracy_valid)
 
             if test_loss > best_loss * 1.1:
                 print("Test loss increased, stopping training.")
@@ -150,6 +157,7 @@ class LSTMModel(ModelInterface):
             json.dump(test_losses, f)
         with open('../logs//A' + self.__str__() + '.json', 'w') as f:
             json.dump(accuracies, f)
+            """
         # Plot losses
         plt.figure(figsize=(10, 5))
         plt.plot(train_losses, label='Training Loss')
@@ -168,8 +176,7 @@ class LSTMModel(ModelInterface):
         plt.legend()
         plt.savefig(f'../figs/LSTM_' + self.__str__() + '_acc.png')
         plt.show()
-
-
+        """
 
     def predict(self, test_data):
         """
@@ -214,3 +221,5 @@ class LSTMModel(ModelInterface):
             input_indices.append(padded_indices)
 
         return torch.tensor(input_indices, dtype=torch.long)
+
+

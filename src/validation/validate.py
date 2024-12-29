@@ -1,9 +1,14 @@
 import torch
+from matplotlib import pyplot as plt
 from rapidfuzz.distance import Levenshtein
 
 from src.evaluation.evaluate import accuracy
 from src.models.LSTMModel import LSTMModel
 from src.models.NGramModel import NGramModel
+
+def save(information, file_path):
+    with open("../logs/" + file_path, 'w', encoding="UTF-8") as f:
+        f.write(str(information))
 
 
 def hyperparameter_search(data, true_data):
@@ -36,10 +41,11 @@ def hyperparameter_search(data, true_data):
                                           label_smoothing=label_smoothing)
                         model.train(data, true_data)
 
-                        valid_line = len(data) - 500
-                        predicted_data = model.predict(data[valid_line:])
-                        metrics = accuracy(predicted_data, true_data[valid_line:])
+                        valid_line = 500
+                        predicted_data = model.predict(data[:valid_line])
+                        metrics = accuracy(predicted_data, true_data[:valid_line])
                         print(f"Metrics: {metrics}")
+                        save(metrics, model.__str__() + "_Metrics")
 
                         # Save best model
                         if not best_metrics or metrics["Character Accuracy"] > best_metrics["Character Accuracy"]:
@@ -52,6 +58,7 @@ def hyperparameter_search(data, true_data):
                                 "learning_rate": learning_rate,
                                 "label_smoothing": label_smoothing
                             }
+                            print(best_model.__str__() + " is now best model")
                         torch.save(model.model.state_dict(), "../saved_models/" + model.__str__() + ".pth")
 
     # Save the best model
@@ -83,18 +90,30 @@ def validation_nGram(train_data, validate_data, train_target, validate_target):
     """
     best_loss = None
     best_n = None
-    best_alpha = None
-
-    for n in range(1, 8):
-        for alpha in [0.01, 0.1, 0.5, 1]:
+    losses = []
+    for n in range(1, 9):
+        for alpha in [0]:
             model = NGramModel(n, alpha)
             model.train(train_data, train_target)
             predicted_data = model.predict(validate_data)
             current_loss = loss(predicted_data, validate_target)
-            print(f"loss for ({n},{alpha}) = {current_loss}")
+            losses.append((n, current_loss))
+            print(f"Levenshtein Distance for {n}-gram : {current_loss}")
             if best_loss is None or current_loss < best_loss:
                 best_loss = current_loss
                 best_n = n
                 best_alpha = alpha
-    print(f"Best model in n-gram family is (n, alpha) = ({best_n},{best_alpha})")
+    print(f"Best model in n-gram  is n = {best_n} -> Levenshtein Distance : {best_loss}")
+    plt.figure(figsize=(10, 6))
+    losses.sort()
+    plt.plot([n for n, _ in losses], [loss for _, loss in losses], label='Levenshtein Distance')
+    plt.xlabel('n')
+    plt.ylabel('Levenshtein Distance')
+    plt.title('Levenshtein Distance for different n values')
+    plt.legend()
+    plt.savefig('n_gram_loss.png')
+    plt.show()
+
     return best_n, best_alpha
+
+

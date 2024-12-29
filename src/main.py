@@ -4,6 +4,8 @@ from safetensors import torch
 import torch
 from src.data.DataReader import DataReader
 from src.evaluation.evaluate import accuracy
+from src.models.HiddenMarkovModel import HiddenMarkovModel
+from src.models.HiddenMarkovModel2 import HiddenMarkovModel2
 from src.models.LSTMModel import LSTMModel
 from src.models.LSTMModelHot import LSTMModelHot
 from src.models.NGramModel import NGramModel
@@ -91,15 +93,17 @@ def n_gram():
     # pronalazenje najboljeg n-grama
     n, alfa = validation_nGram(data[:valid_line], data[valid_line:],
                                true_data[:valid_line], true_data[valid_line:])
-    n = 6
+    #n = 6
     alfa = 0
     n_grams = NGramModel(n, alfa)
     n_grams.train(data, true_data)
     predicted_data = n_grams.predict(test_data)
     metrics = accuracy(predicted_data, true_test_data)
+    print( str(n) + "-gram model on test data:")
     print(metrics)
     save(predicted_data, n_grams.__str__() + "_pred")
     save(metrics, n_grams.__str__() + "_metrics")
+
 
 
 def backoff_n_gram():
@@ -113,6 +117,7 @@ def backoff_n_gram():
     n_grams.train(data, true_data)
     predicted_data = n_grams.predict(test_data)
     metrics = accuracy(predicted_data, true_test_data)
+    print("6-GramModelBackoff on test data:")
     print(metrics)
     save(predicted_data, n_grams.__str__() + "_pred")
     save(metrics, n_grams.__str__() + "_metrics")
@@ -125,7 +130,22 @@ def test():
 
 
 def markov_hidden():
-    pass
+    model = HiddenMarkovModel2()
+    model.train(data, true_data)
+
+    predicted_data = model.predict(test_data)
+    print(predicted_data)
+    metrics = accuracy(predicted_data, true_test_data)
+    print(metrics)
+    save(predicted_data, model.__str__() + "_predictions")
+    save(metrics, model.__str__() + "_metrics")
 
 
-backoff_n_gram()
+def main():
+    n_gram()
+    backoff_n_gram()
+
+
+if __name__ == "__main__":
+    main()
+
